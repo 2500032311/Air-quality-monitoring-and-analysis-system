@@ -1,0 +1,193 @@
+# aqrs_final.py
+# Complete AQRS System (Week 1–12 Integrated)
+
+import csv
+import json
+from datetime import datetime
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+# =========================
+# VALIDATION (Week 11)
+# =========================
+class InvalidValueError(Exception):
+    pass
+
+class InvalidTimestampError(Exception):
+    pass
+
+
+def validate_value(value):
+    try:
+        value = float(value)
+        if value <= 0:
+            raise InvalidValueError("Value must be > 0")
+        return value
+    except:
+        raise InvalidValueError("Invalid numeric input")
+
+
+def validate_timestamp(timestamp):
+    try:
+        datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+        return timestamp.strip().lower()
+    except:
+        raise InvalidTimestampError("Format must be YYYY-MM-DD HH:MM")
+
+
+# =========================
+# OOP MODEL (Week 6–7)
+# =========================
+class PollutantRecord:
+    def __init__(self, timestamp, pm25, pm10):
+        self.timestamp = timestamp
+        self.pm25 = pm25
+        self.pm10 = pm10
+
+    def to_dict(self):
+        return {
+            "timestamp": self.timestamp,
+            "pm25": self.pm25,
+            "pm10": self.pm10
+        }
+
+    def display(self):
+        print(f"{self.timestamp} | PM2.5: {self.pm25} | PM10: {self.pm10}")
+
+
+# =========================
+# FILE HANDLING (Week 8)
+# =========================
+def save_csv(records):
+    with open("aq_data.csv", "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["timestamp", "pm25", "pm10"])
+        writer.writeheader()
+        writer.writerows(records)
+    print("Saved to CSV")
+
+
+def load_csv():
+    try:
+        with open("aq_data.csv", "r") as f:
+            reader = csv.DictReader(f)
+            return [dict(r) for r in reader]
+    except:
+        return []
+
+
+# =========================
+# ANALYTICS (Week 12)
+# =========================
+def show_statistics(records):
+    if not records:
+        print("No data available")
+        return
+
+    pm25 = np.array([float(r["pm25"]) for r in records])
+    pm10 = np.array([float(r["pm10"]) for r in records])
+
+    print("\n--- Statistics ---")
+    print("PM2.5 Avg:", np.mean(pm25))
+    print("PM2.5 Min:", np.min(pm25))
+    print("PM2.5 Max:", np.max(pm25))
+
+    print("PM10 Avg:", np.mean(pm10))
+    print("PM10 Min:", np.min(pm10))
+    print("PM10 Max:", np.max(pm10))
+
+
+def pandas_analysis(records):
+    if not records:
+        print("No data")
+        return
+
+    df = pd.DataFrame(records)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    print("\n--- Daily Average ---")
+    print(df.groupby(df["timestamp"].dt.date).mean())
+
+
+# =========================
+# VISUALIZATION (Week 12)
+# =========================
+def plot_graph(records):
+    if not records:
+        print("No data to plot")
+        return
+
+    timestamps = [r["timestamp"] for r in records]
+    pm25 = [float(r["pm25"]) for r in records]
+    pm10 = [float(r["pm10"]) for r in records]
+
+    plt.figure()
+    plt.plot(timestamps, pm25, label="PM2.5")
+    plt.plot(timestamps, pm10, label="PM10")
+
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.title("Pollution Trend")
+    plt.tight_layout()
+    plt.show()
+
+
+# =========================
+# MAIN MENU
+# =========================
+def main():
+    records = load_csv()
+
+    while True:
+        print("\n=== AQRS FINAL SYSTEM ===")
+        print("1. Add Record")
+        print("2. View Records")
+        print("3. Save Data")
+        print("4. Show Statistics")
+        print("5. Pandas Analysis")
+        print("6. Plot Graph")
+        print("7. Exit")
+
+        choice = input("Enter choice: ")
+
+        if choice == "1":
+            try:
+                ts = validate_timestamp(input("Timestamp: "))
+                pm25 = validate_value(input("PM2.5: "))
+                pm10 = validate_value(input("PM10: "))
+
+                record = PollutantRecord(ts, pm25, pm10)
+                records.append(record.to_dict())
+
+                print("Record added!")
+
+            except Exception as e:
+                print("Error:", e)
+
+        elif choice == "2":
+            for r in records:
+                print(r)
+
+        elif choice == "3":
+            save_csv(records)
+
+        elif choice == "4":
+            show_statistics(records)
+
+        elif choice == "5":
+            pandas_analysis(records)
+
+        elif choice == "6":
+            plot_graph(records)
+
+        elif choice == "7":
+            print("Exiting...")
+            break
+
+        else:
+            print("Invalid choice")
+
+
+if __name__ == "__main__":
+    main()
